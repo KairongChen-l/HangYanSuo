@@ -1,8 +1,8 @@
 #include <iostream>
 #include <vector>
 #include <chrono>
-#include <immintrin.h>   // SIMD 指令
-#include <omp.h>         // OpenMP 并行化
+#include <arm_neon.h>  // ARM64 NEON 指令
+#include <omp.h>      // OpenMP 并行化
 
 using namespace std;
 using namespace std::chrono;
@@ -23,22 +23,21 @@ void initialize_matrices(vector<vector<float>> &A, vector<vector<float>> &B, vec
     }
 }
 
-// 矩阵乘法 (C = A * B)
-void matrix_multiplication(vector<vector<float>> &A, vector<vector<float>> &B, vector<vector<float>> &C) {
+// 使用 NEON 进行矩阵乘法 (C = A * B)
+void matrix_multiplication(const vector<vector<float>> &A, const vector<vector<float>> &B, vector<vector<float>> &C) {
     #pragma omp parallel for collapse(2)
     for (int i = 0; i < N; i += BLOCK_SIZE) {
         for (int j = 0; j < N; j += BLOCK_SIZE) {
             for (int k = 0; k < N; k += BLOCK_SIZE) {
-                // 内部循环 - 块乘法
                 for (int ii = i; ii < i + BLOCK_SIZE; ii++) {
                     for (int jj = j; jj < j + BLOCK_SIZE; jj++) {
-                        __m256 c = _mm256_loadu_ps(&C[ii][jj]);
-                        for (int kk = k; kk < k + BLOCK_SIZE; kk += 8) {
-                            __m256 a = _mm256_loadu_ps(&A[ii][kk]);
-                            __m256 b = _mm256_loadu_ps(&B[kk][jj]);
-                            c = _mm256_fmadd_ps(a, b, c);
+                        float32x4_t c_vec = vld1q_f32(&C[ii][jj]);
+                        for (int kk = k; kk < k + BLOCK_SIZE; kk += 4) {
+                            float32x4_t a_vec = vld1q_f32(&A[ii][kk]);
+                            float32x4_t b_vec = vld1q_f32(&B[kk][jj]);
+                            c_vec = vmlaq_f32(c_vec, a_vec, b_vec);
                         }
-                        _mm256_storeu_ps(&C[ii][jj], c);
+                        vst1q_f32(&C[ii][jj], c_vec);
                     }
                 }
             }
