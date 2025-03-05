@@ -41,6 +41,7 @@
 /*  5. Absolutely no warranty is expressed or implied.                   */
 /*-----------------------------------------------------------------------*/
 # include <stdio.h>
+#include <stdlib.h>
 # include <unistd.h>
 # include <math.h>
 # include <float.h>
@@ -175,11 +176,11 @@
 #ifndef STREAM_TYPE
 #define STREAM_TYPE double
 #endif
-
+/*
 static STREAM_TYPE	a[STREAM_ARRAY_SIZE+OFFSET],
 			b[STREAM_ARRAY_SIZE+OFFSET],
 			c[STREAM_ARRAY_SIZE+OFFSET];
-
+*/
 static double	avgtime[4] = {0}, maxtime[4] = {0},
 		mintime[4] = {FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX};
 
@@ -194,7 +195,7 @@ static double	bytes[4] = {
     };
 
 extern double mysecond();
-extern void checkSTREAMresults();
+extern void checkSTREAMresults(double* a,double* b,double *c);
 #ifdef TUNED
 extern void tuned_STREAM_Copy();
 extern void tuned_STREAM_Scale(STREAM_TYPE scalar);
@@ -207,6 +208,9 @@ extern int omp_get_num_threads();
 int
 main()
     {
+    double *a = (double *)malloc(STREAM_ARRAY_SIZE * sizeof(double));
+    double *b = (double *)malloc(STREAM_ARRAY_SIZE * sizeof(double));   
+    double *c = (double *)malloc(STREAM_ARRAY_SIZE * sizeof(double));
     int			quantum, checktick();
     int			BytesPerWord;
     int			k;
@@ -372,7 +376,7 @@ main()
     printf(HLINE);
 
     /* --- Check Results --- */
-    checkSTREAMresults();
+    checkSTREAMresults(a,b,c);
     printf(HLINE);
 
     return 0;
@@ -430,7 +434,7 @@ double mysecond()
 #ifndef abs
 #define abs(a) ((a) >= 0 ? (a) : -(a))
 #endif
-void checkSTREAMresults ()
+void checkSTREAMresults (double *a, double *b, double *c)
 {
 	STREAM_TYPE aj,bj,cj,scalar;
 	STREAM_TYPE aSumErr,bSumErr,cSumErr;
